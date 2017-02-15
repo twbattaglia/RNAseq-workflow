@@ -9,7 +9,7 @@ RNAseq is becoming the one of the most prominent methods for measuring celluar r
 
 ### Getting Setup
 
-##### 1. Installating Miniconda (if needed)
+#### 1. Installating Miniconda (if needed)
 
 Miniconda is a comprehensive and easy to use package manager for Python (among other things). Miniconda is meant to replace your current Python installation with one that has more features and is modular, so you can delete it without any damage to your system. Not only does it allow you to install Python packages, you can create virtual environments and have access to large bioinformatics repositories (Bioconda).
 
@@ -33,7 +33,7 @@ conda config --add channels r
 conda config --add channels bioconda
 ```
 
-##### 2. Setting Up the Folder Structure
+#### 2. Setting Up the Folder Structure
 
 Organizing is key to proper reproducible researcher. During the processing and analysis steps, many files are created. To best organize the analysis and increase the reprducibility of your analysis, it is best to use a simple folder structure. The struture allows other researchers and collaborators to find certain files or follow the steps used. The structure within this repository is just one way of organizing the data, but you can choose whichever way is the most comfortable.
 
