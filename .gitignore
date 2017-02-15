@@ -1,2 +1,7 @@
 
 *.Rproj
+.Rproj.user
+
+README_files/*
+
+.Rhistory
