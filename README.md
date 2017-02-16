@@ -177,8 +177,9 @@ The first step before processing any samples is to analyze the quality of the da
 After analyzing the quality of the data, the next step is to remove sequences/nucleotides that do not meet your quality standards. There are a multitude of quality control pacakges, but trim\_galore combines **Cutadapt** (<http://cutadapt.readthedocs.io/en/stable/guide.html>) and **FastQC** to remove low quality sequences while performing quality analysis to see the effect of filtering.
 
 The 2 most import parameters to select are what the minimum Phred score (1-30) and a minimum sequencing length. There are different views on this parameter and you can see the papers below for more information about which parameters to use. A good estimate is typically a Phred score of 20 (99% confidence) and a minimum of 50-70% of the sequence length.
-<https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-0956-2> <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0881-8>
-<http://www.epigenesys.eu/images/stories/protocols/pdf/20150303161357_p67.pdf>
+- <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-0956-2>
+- <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0881-8>
+- <http://www.epigenesys.eu/images/stories/protocols/pdf/20150303161357_p67.pdf>
 
 #### Installation
 
@@ -582,6 +583,8 @@ mcols(results, use.names = T)
     ## pvalue              results      Wald test p-value: Group LoGlu vs HiGlu
     ## padj                results                        fdr adjusted p-values
 
+------------------------------------------------------------------------
+
 ### Step 8. Annotate gene symbols
 
 After alignment and summarization, we only have the annotated gene symbols. To get more information about significant genes, we can use annoated databases to convert gene symbols to full gene names and entrez ID's for further analysis.
@@ -688,7 +691,7 @@ write.table(x = as.data.frame(results_sig),
 
 There are multiple ways to plot gene expression data. Below we are only listing a few popular methods, but there are many more resources (**Going Further**) that will walk through different R commands/packages for plotting.
 
-#### 9a. PCA plot
+##### 9a. PCA plot
 
 ``` r
 # Convert all samples to rlog
@@ -697,7 +700,10 @@ ddsMat_rlog <- rlog(ddsMat, blind = FALSE)
 # Plot PCA by column variable
 plotPCA(ddsMat_rlog, intgroup = "Group", ntop = 500) +
   theme_bw() + # remove default ggplot2 theme
-  geom_point(size = 5) # Increase point size
+  geom_point(size = 5) + # Increase point size
+  scale_y_continuous(limits = c(-5, 5)) + # change limits to fix figure dimensions
+  ggtitle(label = "Principal Component Analysis (PCA)", 
+          subtitle = "Top 500 most variable genes") 
 ```
 
 ![](README_files/figure-markdown_github/pca_plot-1.png)
@@ -720,18 +726,19 @@ annotation_col = data.frame(
 
 # Specify colors you want to annotate the columns by.
 ann_colors = list(
-  Group = c("LoGlu" = "lightblue", "HiGlu" = "darkorange"),
+  Group = c(LoGlu = "lightblue", HiGlu = "darkorange"),
   Replicate = c(Rep1 = "darkred", Rep2 = "forestgreen")
 )
 
 # Make Heatmap with pheatmap function.
-# See more in documentation for customization
+## See more in documentation for customization
 pheatmap(mat = mat, 
          color = colorRampPalette(brewer.pal(9, "YlOrBr"))(255), 
-         scale = "row", 
-         annotation_col = annotation_col, 
-         annotation_colors = ann_colors, 
-         fontsize = 8,
+         scale = "row", # Scale genes to Z-score (how many standard deviations)
+         annotation_col = annotation_col, # Add multiple annotations to the samples
+         annotation_colors = ann_colors,# Change the default colors of the annotations
+         fontsize = 6.5, # Make fonts smaller
+         cellwidth = 55, # Make the cells wider
          show_colnames = F)
 ```
 
@@ -741,6 +748,7 @@ pheatmap(mat = mat,
 
 ``` r
 # Gather Log-fold change and FDR-corrected pvalues from DESeq2 results
+## - Change pvalues to -log10 (1.3 = 0.05)
 data <- data.frame(pval = -log10(results$padj), 
                    lfc = results$log2FoldChange, 
                    row.names = row.names(results))
@@ -748,19 +756,29 @@ data <- data.frame(pval = -log10(results$padj),
 # Remove any rows that have NA as an entry
 data <- na.omit(data)
 
+# Color the points which are up or down
+## If fold-change > 0 and pvalue > 1.3 (Increased significant)
+## If fold-change < 0 and pvalue > 1.3 (Decreased significant)
+data <- mutate(data, color = ifelse(test = lfc > 0 & pval > 1.3, 
+                                    yes = "Increased", 
+                                    no = ifelse(test = lfc < 0 & pval > 1.3, 
+                                                yes = "Decreased", 
+                                                no = "nonsignificant")))
+
 # Make a basic ggplot2 object with x-y values
-vol <- ggplot(data, aes(x = lfc, y = pval))
+vol <- ggplot(data, aes(x = lfc, y = pval, color = color))
 
 # Add ggplot2 layers
 vol +   
-  ggtitle(label = "Volcano Plot") +
-  geom_point(aes(colour = pval), size = 5, alpha = 0.7, na.rm = T) + # color the dots
+  ggtitle(label = "Volcano Plot", subtitle = "Colored by fold-change directionality") +
+  geom_point(size = 2.5, alpha = 0.8, na.rm = T) +
+  scale_color_manual(name = "Directionality",
+                     values = c(Increased = "#008B00", Decreased = "#CD4F39", nonsignificant = "darkgray")) +
   theme_bw(base_size = 14) + # change overall theme
   theme(legend.position = "right") + # change the legend
   xlab(expression(log[2]("LoGlu" / "HiGlu"))) + # Change X-Axis label
   ylab(expression(-log[10]("adjusted p-value"))) + # Change Y-Axis label
   geom_hline(yintercept = 1.3, colour = "darkgrey") + # Add p-adj value cutoff line
-  scale_colour_gradient(low = "red", high = "green") + # Add red-green scaling by intensity
   scale_y_continuous(trans = "log1p") # Scale yaxis due to large p-values
 ```
 
@@ -776,7 +794,7 @@ plotMA(results, ylim = c(-5, 5))
 
 ![](README_files/figure-markdown_github/ma_plot-1.png)
 
-##### 9d. Plot Dispersions
+##### 9e. Plot Dispersions
 
 ``` r
 plotDispEsts(ddsMat)
@@ -784,7 +802,7 @@ plotDispEsts(ddsMat)
 
 ![](README_files/figure-markdown_github/dispersions-1.png)
 
-#### 9e. Single gene plot
+##### 9f. Single gene plot
 
 ``` r
 # Convert all samples to rlog
@@ -794,7 +812,8 @@ ddsMat_rlog <- rlog(ddsMat, blind = FALSE)
 top_gene <- rownames(results)[which.min(results$log2FoldChange)]
 
 # Plot single gene
-plotCounts(ddsMat, gene = top_gene, 
+plotCounts(dds = ddsMat, 
+           gene = top_gene, 
            intgroup = "Group", 
            normalized = T, 
            transform = T)
@@ -806,9 +825,9 @@ plotCounts(ddsMat, gene = top_gene,
 
 ### Step 10. Finding Pathways from Differential Expressed Genes
 
-Pathway enrichment analysis is a great way to generate overall conclusions based on the individual gene changes. Sometimes individiual gene changes are overwheling and are difficult to interpret. But by analyzing which genes may fall into different pathways, we can get a better idea of what mRNA changes in relation to phenotype are occuring. More information about **clusterProfiler** here: <http://bioconductor.org/packages/release/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html>
+Pathway enrichment analysis is a great way to generate overall conclusions based on the individual gene changes. Sometimes individiual gene changes are overwheling and are difficult to interpret. But by analyzing the pathways the genes fall into, we can gather a top level view of gene responses. You can find more information about **clusterProfiler** here: <http://bioconductor.org/packages/release/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html>
 
-#### 10a. Set up matrix to take into account EntrezID's and fold changes for each gene
+##### 10a. Set up matrix to take into account EntrezID's and fold changes for each gene
 
 ``` r
 # Remove any genes that do not have any entrez identifiers
@@ -821,15 +840,15 @@ gene_matrix <- results_sig_entrez$log2FoldChange
 names(gene_matrix) <- results_sig_entrez$entrez
 
 # View the format of the gene matrix
-## Names = ENTREZ ID
-## Values = Log2 Fold changes
+##- Names = ENTREZ ID
+##- Values = Log2 Fold changes
 head(gene_matrix)
 ```
 
     ##     497097      27395      21399     240690     319263      71096 
     ##  0.6419222  0.3980896  1.3944884 -0.9991301  0.3902411  0.7318962
 
-#### 10b. Enrich genes using the KEGG database
+##### 10b. Enrich genes using the KEGG database
 
 ``` r
 kegg_enrich <- enrichKEGG(gene = names(gene_matrix),
@@ -847,7 +866,7 @@ barplot(kegg_enrich,
 
 ![](README_files/figure-markdown_github/kegg_enrich-1.png)
 
-#### 10b. Enrich genes using the Gene Onotlogy
+##### 10c. Enrich genes using the Gene Onotlogy
 
 ``` r
 go_enrich <- enrichGO(gene = names(gene_matrix),
@@ -889,15 +908,15 @@ pathview(gene.data = gene_matrix,
 ### Going further with RNAseq analysis
 
 You can the links below for a more in depth walk through of RNAseq analysis using R:
-<http://www.bioconductor.org/help/workflows/rnaseqGene/>
-<http://bioconnector.org/workshops/r-rnaseq-airway.html>
-<http://www-huber.embl.de/users/klaus/Teaching/DESeq2Predoc2014.html>
-<http://www-huber.embl.de/users/klaus/Teaching/DESeq2.pdf>
-<https://web.stanford.edu/class/bios221/labs/rnaseq/lab_4_rnaseq.html>
-<http://www.rna-seqblog.com/which-method-should-you-use-for-normalization-of-rna-seq-data/>
-<http://www.rna-seqblog.com/category/technology/methods/data-analysis/data-visualization/>
-<http://www.rna-seqblog.com/category/technology/methods/data-analysis/pathway-analysis/>
-<http://www.rna-seqblog.com/inferring-metabolic-pathway-activity-levels-from-rna-seq-data/>
+- <http://www.bioconductor.org/help/workflows/rnaseqGene/>
+- <http://bioconnector.org/workshops/r-rnaseq-airway.html>
+- <http://www-huber.embl.de/users/klaus/Teaching/DESeq2Predoc2014.html>
+- <http://www-huber.embl.de/users/klaus/Teaching/DESeq2.pdf>
+- <https://web.stanford.edu/class/bios221/labs/rnaseq/lab_4_rnaseq.html>
+- <http://www.rna-seqblog.com/which-method-should-you-use-for-normalization-of-rna-seq-data/>
+- <http://www.rna-seqblog.com/category/technology/methods/data-analysis/data-visualization/>
+- <http://www.rna-seqblog.com/category/technology/methods/data-analysis/pathway-analysis/>
+- <http://www.rna-seqblog.com/inferring-metabolic-pathway-activity-levels-from-rna-seq-data/>
 
 ------------------------------------------------------------------------
 
