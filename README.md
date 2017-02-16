@@ -149,7 +149,7 @@ The first step before processing any samples is to analyze the quality of the da
     # Help
     fastqc -h
 
-    # Command
+    # Run FastQC
     fastqc \
     -o results/1_initial_qc/ \
     --noextract \
@@ -189,7 +189,7 @@ The 2 most import parameters to select are what the minimum Phred score (1-30) a
     # Help
     trim_galore -h
 
-    # Command
+    # Run Trim Galore!
     trim_galore \
     --quality 20 \
     --fastqc \
@@ -268,7 +268,7 @@ Before we can run the `sortmerna` command, we must first download and process th
     sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta,sortmerna_db/index/silva-euk-18s-id95:\
     sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta,sortmerna_db/index/silva-euk-28s-id98
 
-    # Command
+    # Run SortMeRNA (~15min)
     sortmerna \
     --ref $sortmernaREF \
     --reads results/2_trimmed_output/sample_trimmed.fq \
@@ -327,7 +327,7 @@ Similar to the **SortMeRNA** step, we must first generate an index of the genome
     # Help
     STAR -h
 
-    # Run STAR
+    # Run STAR (~10min)
     STAR \
     --genomeDir star_index \
     --readFilesIn filtered/sample_filtered.fq  \
@@ -372,17 +372,23 @@ Now that we have our .BAM alignment files, we can then proceed to try and summar
     # Help
     featureCounts -h
 
+    # Change directory into the aligned .BAM folder
+    cd results/4_aligned_sequences/aligned_bam
+
     # Store list of files as a variable
-    dirlist=$(ls output/4_aligned_sequences/aligned_bam/*.bam | tr '\n' ' ')
+    dirlist=$(ls -t ./*.bam | tr '\n' ' ')
     echo $dirlist
 
     # Run featureCounts on all of the samples (~10 minutes)
     featureCounts \
-    -a annotation/* \
-    -o results/5_final_counts/final_counts.txt \
+    -a ../../annotation/* \
+    -o ../../results/5_final_counts/final_counts.txt \
     -g 'gene_name' \
     -T 4 \
     $dirlist
+
+    # Change directory back to main folder
+    cd ../../../
 
 #### Output
 
@@ -424,6 +430,476 @@ During the qulaity filtering, rRNA removal, **STAR** alignment and gene summariz
     └── multiqc_report.html - Beautiful figures representing the logs from each step
     └── multiqc_data/ - Folder of data that multiqc found from various log files
 ```
+
+------------------------------------------------------------------------
+
+### Step 7. Importing Gene Counts into R/RStudio
+
+Once the workflow has completed, you can now use the gene count table as an input into **DESeq2** for statistical analysis using the R-programming language. It is highly reccomended to use **RStudio** when writing R code and generating R-related analyses. You can download **RStudio** for your system here: <https://www.rstudio.com/products/rstudio/download/>
+
+##### 7a. Install required R-libraries
+
+``` r
+source("https://bioconductor.org/biocLite.R")
+biocLite("DESeq2") ; library(DESeq2)
+biocLite("ggplot2") ; library(DESeq2)
+biocLite("clusterProfiler") ; library(clusterProfiler)
+biocLite("biomaRt") ; library(biomaRt)
+biocLite("ReactomePA") ; library(ReactomePA)
+biocLite("DOSE") ; library(DOSE)
+biocLite("KEGG.db") ; library(KEGG.db)
+biocLite("org.Mm.eg.db") ; library(org.Mm.eg.db)
+biocLite("org.Hs.eg.db") ; library(org.Hs.eg.db)
+biocLite("pheatmap") ; library(pheatmap)
+biocLite("genefilter") ; library(genefilter)
+biocLite("RColorBrewer") ; library(RColorBrewer)
+biocLite("GO.db") ; library(GO.db)
+biocLite("topGO") ; library(topGO)
+biocLite("dplyr") ; library(dplyr)
+biocLite("gage") ; library(gage)
+biocLite("ggsci") ; library(ggsci)
+```
+
+##### 7b. Import featureCounts output
+
+One you have an R environment appropriatley set up, you can begin to import the **featureCounts** table found within the `5_final_counts` folder. This tutorial will use **DESeq2** to normalize and perform the statistical analysis between sample groups. Be sure to know the full location of the `final_counts.txt` file generate from **featureCounts**.
+
+##### Note: If you would like to use an example final\_counts.txt table, look into the example/ folder.
+
+``` r
+# Import gene counts table
+# - skip first row (general command info)
+# - make row names the gene identifiers
+countdata <- read.table("example/final_counts.txt", header = TRUE, skip = 1, row.names = 1)
+
+# Remove .bam + '..' from column identifiers
+colnames(countdata) <- gsub(".bam", "", colnames(countdata), fixed = T)
+colnames(countdata) <- gsub(".bam", "", colnames(countdata), fixed = T)
+colnames(countdata) <- gsub("..", "", colnames(countdata), fixed = T)
+
+# Remove length/char columns
+countdata <- countdata[ ,c(-1:-5)]
+
+# Make sure ID's are correct
+head(countdata)
+```
+
+    ##               SRR1374924 SRR1374923 SRR1374921 SRR1374922
+    ## 4933401J01Rik          0          0          0          0
+    ## Gm26206                0          0          0          0
+    ## Xkr4                 214        302        459        425
+    ## Gm18956                0          0          0          0
+    ## Gm37180                4          2          3          1
+    ## Gm37363                1          0          0          1
+
+##### 7c. Import metadata text file. The SampleID's must be the first column.
+
+``` r
+# Import metadata file
+# - make row names the matching sampleID's from the countdata
+metadata <- read.delim("example/metadata.txt", row.names = 1)
+
+# Add sampleID's to the mapping file
+metadata$sampleid <- row.names(metadata)
+
+# Reorder sampleID's to match featureCounts column order. 
+metadata <- metadata[match(colnames(countdata), metadata$sampleid), ]
+
+# Make sure ID's are correct
+head(metadata)
+```
+
+    ##            Group Replicate   sampleid
+    ## SRR1374924 HiGlu      Rep2 SRR1374924
+    ## SRR1374923 HiGlu      Rep1 SRR1374923
+    ## SRR1374921 LoGlu      Rep1 SRR1374921
+    ## SRR1374922 LoGlu      Rep2 SRR1374922
+
+##### 7d. Make DESeq2 object from counts and metadata
+
+``` r
+# - countData : count dataframe
+# - colData : sample metadata in the dataframe with row names as sampleID's
+# - design : The design of the comparisons to use. 
+#            Use (~) before the name of the column variable to compare
+ddsMat <- DESeqDataSetFromMatrix(countData = countdata,
+                                 colData = metadata,
+                                 design = ~Group)
+
+
+# Find differential expressed genes
+ddsMat <- DESeq(ddsMat)
+```
+
+    ## estimating size factors
+
+    ## estimating dispersions
+
+    ## gene-wise dispersion estimates
+
+    ## mean-dispersion relationship
+
+    ## final dispersion estimates
+
+    ## fitting model and testing
+
+##### 7e. Get basic statisics about the number of significant genes
+
+``` r
+# Get results from testing with FDR adjust pvalues
+results <- results(ddsMat, pAdjustMethod = "fdr", alpha = 0.05)
+
+# Generate summary of testing. 
+summary(results)
+```
+
+    ## 
+    ## out of 10448 with nonzero total read count
+    ## adjusted p-value < 0.05
+    ## LFC > 0 (up)     : 996, 9.5% 
+    ## LFC < 0 (down)   : 767, 7.3% 
+    ## outliers [1]     : 0, 0% 
+    ## low counts [2]   : 4709, 45% 
+    ## (mean count < 7)
+    ## [1] see 'cooksCutoff' argument of ?results
+    ## [2] see 'independentFiltering' argument of ?results
+
+``` r
+# Check directionality of the log2 fold changes
+## Log2 fold change is set as (LoGlu / HiGlu)
+## Postive fold changes = Increased in LoGlu
+## Negative fold changes = Decreased in LoGlu
+mcols(results, use.names = T)
+```
+
+    ## DataFrame with 6 rows and 2 columns
+    ##                        type                                  description
+    ##                 <character>                                  <character>
+    ## baseMean       intermediate    mean of normalized counts for all samples
+    ## log2FoldChange      results log2 fold change (MAP): Group LoGlu vs HiGlu
+    ## lfcSE               results         standard error: Group LoGlu vs HiGlu
+    ## stat                results         Wald statistic: Group LoGlu vs HiGlu
+    ## pvalue              results      Wald test p-value: Group LoGlu vs HiGlu
+    ## padj                results                        fdr adjusted p-values
+
+### Step 8. Annotate gene symbols
+
+After alignment and summarization, we only have the annotated gene symbols. To get more information about significant genes, we can use annoated databases to convert gene symbols to full gene names and entrez ID's for further analysis.
+
+##### 8a. Gather gene annotation information
+
+``` r
+# Mouse genome database (Select the correct one)
+library(org.Mm.eg.db) 
+
+# Add gene full name
+results$description <- mapIds(x = org.Mm.eg.db,
+                              keys = row.names(results),
+                              column = "GENENAME",
+                              keytype = "SYMBOL",
+                              multiVals = "first")
+
+# Add gene symbol
+results$symbol <- row.names(results)
+
+# Add ENTREZ ID
+results$entrez <- mapIds(x = org.Mm.eg.db,
+                         keys = row.names(results),
+                         column = "ENTREZID",
+                         keytype = "SYMBOL",
+                         multiVals = "first")
+
+# Subset for only significant genes (q < 0.05)
+results_sig <- subset(results, padj < 0.05)
+head(results_sig)
+```
+
+    ## log2 fold change (MAP): Group LoGlu vs HiGlu 
+    ## Wald test p-value: Group LoGlu vs HiGlu 
+    ## DataFrame with 6 rows and 9 columns
+    ##         baseMean log2FoldChange      lfcSE       stat       pvalue
+    ##        <numeric>      <numeric>  <numeric>  <numeric>    <numeric>
+    ## Xkr4    344.0867      0.6419222 0.16930869   3.791431 1.497817e-04
+    ## Mrpl15  863.0433      0.3980896 0.11919087   3.339934 8.379824e-04
+    ## Tcea1   934.6538      1.3944884 0.11488584  12.138036 6.640062e-34
+    ## St18   4881.5741     -0.9991301 0.06848944 -14.588091 3.344260e-48
+    ## Pcmtd1 2074.3123      0.3902411 0.08594089   4.540808 5.603899e-06
+    ## Sntg1   477.2279      0.7318962 0.14674529   4.987527 6.115693e-07
+    ##                padj
+    ##           <numeric>
+    ## Xkr4   9.001016e-04
+    ## Mrpl15 4.075577e-03
+    ## Tcea1  4.763415e-32
+    ## St18   4.463420e-46
+    ## Pcmtd1 4.574790e-05
+    ## Sntg1  6.082836e-06
+    ##                                                                         description
+    ##                                                                         <character>
+    ## Xkr4                                              X-linked Kx blood group related 4
+    ## Mrpl15                                          mitochondrial ribosomal protein L15
+    ## Tcea1                                     transcription elongation factor A (SII) 1
+    ## St18                                               suppression of tumorigenicity 18
+    ## Pcmtd1 protein-L-isoaspartate (D-aspartate) O-methyltransferase domain containing 1
+    ## Sntg1                                                           syntrophin, gamma 1
+    ##             symbol      entrez
+    ##        <character> <character>
+    ## Xkr4          Xkr4      497097
+    ## Mrpl15      Mrpl15       27395
+    ## Tcea1        Tcea1       21399
+    ## St18          St18      240690
+    ## Pcmtd1      Pcmtd1      319263
+    ## Sntg1        Sntg1       71096
+
+##### 8b. Write all the important results to .txt files
+
+``` r
+# Write normalized gene counts to a .txt file
+write.table(x = as.data.frame(counts(ddsMat), normalized = T), 
+            file = 'normalized_counts.txt', 
+            sep = '\t', 
+            quote = F,
+            col.names = NA)
+
+# Write significant normalized gene counts to a .txt file
+write.table(x = counts(ddsMat[row.names(results_sig)], normalized = T), 
+            file = 'normalized_counts_significant.txt', 
+            sep = '\t', 
+            quote = F, 
+            col.names = NA)
+
+# Write the annotated results table to a .txt file
+write.table(x = as.data.frame(results), 
+            file = "results_gene_annotated.txt", 
+            sep = '\t', 
+            quote = F,
+            col.names = NA)
+
+# Write significant annotated results table to a .txt file
+write.table(x = as.data.frame(results_sig), 
+            file = "results_gene_annotated_significant.txt", 
+            sep = '\t', 
+            quote = F,
+            col.names = NA)
+```
+
+------------------------------------------------------------------------
+
+### Step 9. Plotting Gene Expression Data
+
+There are multiple ways to plot gene expression data. Below we are only listing a few popular methods, but there are many more resources (**Going Further**) that will walk through different R commands/packages for plotting.
+
+#### 9a. PCA plot
+
+``` r
+# Convert all samples to rlog
+ddsMat_rlog <- rlog(ddsMat, blind = FALSE)
+
+# Plot PCA by column variable
+plotPCA(ddsMat_rlog, intgroup = "Group", ntop = 500) +
+  theme_bw() + # remove default ggplot2 theme
+  geom_point(size = 5) # Increase point size
+```
+
+![](README_files/figure-markdown_github/pca_plot-1.png)
+
+##### 9b. Heatmap
+
+``` r
+# Convert all samples to rlog
+ddsMat_rlog <- rlog(ddsMat, blind = FALSE)
+
+# Gather 30 significant genes and make matrix
+mat <- assay(ddsMat_rlog[row.names(results_sig)])[1:40, ]
+
+# Choose which column variables you want to annotate the columns by.
+annotation_col = data.frame(
+  Group = factor(colData(ddsMat_rlog)$Group), 
+  Replicate = factor(colData(ddsMat_rlog)$Replicate),
+  row.names = colData(ddsMat_rlog)$sampleid
+)
+
+# Specify colors you want to annotate the columns by.
+ann_colors = list(
+  Group = c("LoGlu" = "lightblue", "HiGlu" = "darkorange"),
+  Replicate = c(Rep1 = "darkred", Rep2 = "forestgreen")
+)
+
+# Make Heatmap with pheatmap function.
+# See more in documentation for customization
+pheatmap(mat = mat, 
+         color = colorRampPalette(brewer.pal(9, "YlOrBr"))(255), 
+         scale = "row", 
+         annotation_col = annotation_col, 
+         annotation_colors = ann_colors, 
+         fontsize = 8,
+         show_colnames = F)
+```
+
+![](README_files/figure-markdown_github/heatmap_plot-1.png)
+
+##### 9c. Volcano Plot
+
+``` r
+# Gather Log-fold change and FDR-corrected pvalues from DESeq2 results
+data <- data.frame(pval = -log10(results$padj), 
+                   lfc = results$log2FoldChange, 
+                   row.names = row.names(results))
+
+# Remove any rows that have NA as an entry
+data <- na.omit(data)
+
+# Make a basic ggplot2 object with x-y values
+vol <- ggplot(data, aes(x = lfc, y = pval))
+
+# Add ggplot2 layers
+vol +   
+  ggtitle(label = "Volcano Plot") +
+  geom_point(aes(colour = pval), size = 5, alpha = 0.7, na.rm = T) + # color the dots
+  theme_bw(base_size = 14) + # change overall theme
+  theme(legend.position = "right") + # change the legend
+  xlab(expression(log[2]("LoGlu" / "HiGlu"))) + # Change X-Axis label
+  ylab(expression(-log[10]("adjusted p-value"))) + # Change Y-Axis label
+  geom_hline(yintercept = 1.3, colour = "darkgrey") + # Add p-adj value cutoff line
+  scale_colour_gradient(low = "red", high = "green") + # Add red-green scaling by intensity
+  scale_y_continuous(trans = "log1p") # Scale yaxis due to large p-values
+```
+
+![](README_files/figure-markdown_github/volcano_plot-1.png)
+
+##### 9d. MA Plot
+
+<https://en.wikipedia.org/wiki/MA_plot>
+
+``` r
+plotMA(results, ylim = c(-5, 5))
+```
+
+![](README_files/figure-markdown_github/ma_plot-1.png)
+
+##### 9d. Plot Dispersions
+
+``` r
+plotDispEsts(ddsMat)
+```
+
+![](README_files/figure-markdown_github/dispersions-1.png)
+
+#### 9e. Single gene plot
+
+``` r
+# Convert all samples to rlog
+ddsMat_rlog <- rlog(ddsMat, blind = FALSE)
+
+# Get gene with highest expression
+top_gene <- rownames(results)[which.min(results$log2FoldChange)]
+
+# Plot single gene
+plotCounts(ddsMat, gene = top_gene, 
+           intgroup = "Group", 
+           normalized = T, 
+           transform = T)
+```
+
+![](README_files/figure-markdown_github/single_plot-1.png)
+
+------------------------------------------------------------------------
+
+### Step 10. Finding Pathways from Differential Expressed Genes
+
+Pathway enrichment analysis is a great way to generate overall conclusions based on the individual gene changes. Sometimes individiual gene changes are overwheling and are difficult to interpret. But by analyzing which genes may fall into different pathways, we can get a better idea of what mRNA changes in relation to phenotype are occuring. More information about **clusterProfiler** here: <http://bioconductor.org/packages/release/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html>
+
+#### 10a. Set up matrix to take into account EntrezID's and fold changes for each gene
+
+``` r
+# Remove any genes that do not have any entrez identifiers
+results_sig_entrez <- subset(results_sig, is.na(entrez) == FALSE)
+
+# Create a matrix of gene log2 fold changes
+gene_matrix <- results_sig_entrez$log2FoldChange
+
+# Add the entrezID's as names for each logFC entry
+names(gene_matrix) <- results_sig_entrez$entrez
+
+# View the format of the gene matrix
+## Names = ENTREZ ID
+## Values = Log2 Fold changes
+head(gene_matrix)
+```
+
+    ##     497097      27395      21399     240690     319263      71096 
+    ##  0.6419222  0.3980896  1.3944884 -0.9991301  0.3902411  0.7318962
+
+#### 10b. Enrich genes using the KEGG database
+
+``` r
+kegg_enrich <- enrichKEGG(gene = names(gene_matrix),
+                          organism = 'mouse',
+                          pvalueCutoff = 0.05, 
+                          qvalueCutoff = 0.10)
+
+# Plot results
+barplot(kegg_enrich, 
+        drop = TRUE, 
+        showCategory = 10, 
+        title = "KEGG Enrichment Pathways",
+        font.size = 8)
+```
+
+![](README_files/figure-markdown_github/kegg_enrich-1.png)
+
+#### 10b. Enrich genes using the Gene Onotlogy
+
+``` r
+go_enrich <- enrichGO(gene = names(gene_matrix),
+                      OrgDb = 'org.Mm.eg.db', 
+                      readable = T,
+                      ont = "BP",
+                      pvalueCutoff = 0.05, 
+                      qvalueCutoff = 0.10)
+
+# Plot results
+barplot(go_enrich, 
+        drop = TRUE, 
+        showCategory = 10, 
+        title = "GO Biological Pathways",
+        font.size = 8)
+```
+
+![](README_files/figure-markdown_github/go_enrich-1.png)
+
+------------------------------------------------------------------------
+
+### Step 11. Plotting KEGG Pathways
+
+**Pathview** is a package that can take KEGG identifier and overlay fold changes to the genes which are found to be significantly different. **Pathview** also works with other organisms found in the KEGG database and can plot any of the KEGG pathways for the particular organism.
+
+``` r
+# Load pathview
+biocLite("pathview") ; library(pathview)
+
+# Plot specific KEGG pathways (with fold change) 
+## pathway.id : KEGG pathway identifier
+pathview(gene.data = gene_matrix, 
+         pathway.id = "04070", 
+         species = "mouse")
+```
+
+![KEGG Pathways](README_files/mmu04070.pathview.png)
+
+### Going further with RNAseq analysis
+
+You can the links below for a more in depth walk through of RNAseq analysis using R:
+<http://www.bioconductor.org/help/workflows/rnaseqGene/>
+<http://bioconnector.org/workshops/r-rnaseq-airway.html>
+<http://www-huber.embl.de/users/klaus/Teaching/DESeq2Predoc2014.html>
+<http://www-huber.embl.de/users/klaus/Teaching/DESeq2.pdf>
+<https://web.stanford.edu/class/bios221/labs/rnaseq/lab_4_rnaseq.html>
+<http://www.rna-seqblog.com/which-method-should-you-use-for-normalization-of-rna-seq-data/>
+<http://www.rna-seqblog.com/category/technology/methods/data-analysis/data-visualization/>
+<http://www.rna-seqblog.com/category/technology/methods/data-analysis/pathway-analysis/>
+<http://www.rna-seqblog.com/inferring-metabolic-pathway-activity-levels-from-rna-seq-data/>
+
+------------------------------------------------------------------------
 
 #### Citations:
 

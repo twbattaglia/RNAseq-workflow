@@ -1,0 +1,6 @@
+SampleID	Group	Replicate
+SRR1374921	LoGlu	Rep1
+SRR1374922	LoGlu	Rep2
+SRR1374923	HiGlu	Rep1
+SRR1374924	HiGlu	Rep2
+
