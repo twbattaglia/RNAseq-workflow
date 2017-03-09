@@ -21,7 +21,7 @@ wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O ~
 wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O ~/miniconda.sh
 
 # Run the miniconda installation
-bash minoconda.sh -b -f -p ~/miniconda
+bash miniconda.sh -b -f -p ~/miniconda
 
 # Add miniconda to the system path
 echo 'PATH="$HOME/miniconda/bin:$PATH' >> ~/.bash_profile
