@@ -27,7 +27,7 @@ bash miniconda.sh -b -f -p ~/miniconda
 echo 'PATH="$HOME/miniconda/bin:$PATH' >> ~/.bash_profile
 
 # Source system file to activate miniconda
-~/.bash_profile
+source ~/.bash_profile
 
 # Add bioinformatic channels for downloading required packages
 conda config --add channels conda-forge
