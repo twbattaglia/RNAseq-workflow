@@ -15,19 +15,19 @@ Miniconda is a comprehensive and easy to use package manager for Python (among o
 
 ``` bash
 # Download the Miniconda3 installer to your home directory (Only for macOS)
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O ~/minoconda.sh
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O ~/miniconda.sh
 
 # Download the Miniconda3 installer to your home directory (Only for LINUX or Cluster)
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/minoconda.sh
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
 
 # Run the miniconda installation
-bash minoconda.sh -b -f -p ~/miniconda
+bash miniconda.sh -b -f -p ~/miniconda
 
 # Add miniconda to the system path
 echo 'PATH="$HOME/miniconda/bin:$PATH' >> ~/.bash_profile
 
 # Source system file to activate miniconda
-~/.bash_profile
+source ~/.bash_profile
 
 # Add bioinformatic channels for downloading required packages
 conda config --add channels conda-forge
@@ -55,30 +55,30 @@ cd new_workflow
 
 ``` bash
 ── new_workflow/
-  │   └── annotation/ -> Genome annotation file (.GTF/.GFF)
+  │   └── annotation/               <- Genome annotation file (.GTF/.GFF)
   │  
-  │   └── genome/ -> Host genome file (.FASTA)
+  │   └── genome/                   <- Host genome file (.FASTA)
   │  
-  │   └── input/ -> Location of input  RNAseq data
+  │   └── input/                    <- Location of input  RNAseq data
   │  
-  │   └── output/ ->  Data generated during processing steps
-  │       ├── 1_initial_qc/ - Main alignment files for each sample
-  │       ├── 2_trimmed_output/ - Log from running STAR alignment step
-  │       ├── 3_rRNA/ - STAR alignment counts output (for comparison with featureCounts)
-  │           ├── aligned/ - Sequences that aligned to rRNA databases (rRNA contaminated)
-  │           ├── filtered/ - Sequences with rRNA sequences removed  (rRNA-free)
-  │           ├── logs/ - logs from running SortMeRNA
-  │       ├── 4_aligned_sequences/ - Main alignment files for each sample
-  │           ├── aligned_bam/ - Alignment files generated from STAR (.BAM)
-  │           ├── aligned_logs/ - Log from running STAR alignment step
-  │       ├── 5_final_counts/ - Summarized gene counts across all samples
-  │       ├── 6_multiQC/ - Overall report of logs for each step
+  │   └── output/                   <- Data generated during processing steps
+  │       ├── 1_initial_qc/         <- Main alignment files for each sample
+  │       ├── 2_trimmed_output/     <-  Log from running STAR alignment step
+  │       ├── 3_rRNA/               <- STAR alignment counts output (for comparison with featureCounts)
+  │           ├── aligned/          <-  Sequences that aligned to rRNA databases (rRNA contaminated)
+  │           ├── filtered/         <-  Sequences with rRNA sequences removed  (rRNA-free)
+  │           ├── logs/             <- logs from running SortMeRNA
+  │       ├── 4_aligned_sequences/  <- Main alignment files for each sample
+  │           ├── aligned_bam/      <-  Alignment files generated from STAR (.BAM)
+  │           ├── aligned_logs/     <- Log from running STAR alignment step
+  │       ├── 5_final_counts/       <- Summarized gene counts across all samples
+  │       ├── 6_multiQC/            <- Overall report of logs for each step
   │  
-  │   └── sortmerna_db/ -> Folder to store the rRNA databases for SortMeRNA
-  │       ├── index/ - indexed versions of the rRNA sequences for faster alignment
-  │       ├── rRNA_databases/ - rRNA sequences from bacteria, archea and eukaryotes
+  │   └── sortmerna_db/             <- Folder to store the rRNA databases for SortMeRNA
+  │       ├── index/                <- indexed versions of the rRNA sequences for faster alignment
+  │       ├── rRNA_databases/       <- rRNA sequences from bacteria, archea and eukaryotes
   │  
-  │   └── star_index/ -> Folder to store the indexed genome files from STAR 
+  │   └── star_index/               <-  Folder to store the indexed genome files from STAR 
 ```
 
 #### C. Download Host Genome
@@ -159,8 +159,8 @@ The first step before processing any samples is to analyze the quality of the da
 
 ``` bash
 ── results/1_initial_qc/
-    └──  sample_fastqc.html - HTML file of FastQC fquality analysis figures
-    └──  sample_fastqc.zip - FastQC report data
+    └──  sample_fastqc.html   <-  HTML file of FastQC fquality analysis figures
+    └──  sample_fastqc.zip    <- FastQC report data
 ```
 
 ------------------------------------------------------------------------
@@ -202,10 +202,10 @@ The 2 most import parameters to select are what the minimum Phred score (1-30) a
 
 ``` bash
 ── results/2_trimmed_output/
-     └──  sample_trimmed.fq - Trimmed sequencing file (.fastq)
-     └──  sample_trimmed.html - HTML file of FastQC fquality analysis figures
-     └──  sample_trimmed.zip -  FastQC report data
-     └──  sample.fastq.trimming_report.txt -  Cutadapt trimming report
+     └──  sample_trimmed.fq                 <-  Trimmed sequencing file (.fastq)
+     └──  sample_trimmed.html               <- HTML file of FastQC fquality analysis figures
+     └──  sample_trimmed.zip                <- FastQC report data
+     └──  sample.fastq.trimming_report.txt  <-   Cutadapt trimming report
 ```
 
 ------------------------------------------------------------------------
@@ -287,9 +287,9 @@ Before we can run the `sortmerna` command, we must first download and process th
 
 ``` bash
 ── results/3_rRNA/
-    └── aligned/sample_aligned.fq - sequences with rRNA contamination
-    └── filtered/sample_filtered.fq - sequences without any rRNA contamination
-    └── logs/sample_aligned.log - log from SortMeRNA analysis
+    └── aligned/sample_aligned.fq     <-  sequences with rRNA contamination
+    └── filtered/sample_filtered.fq   <- sequences without any rRNA contamination
+    └── logs/sample_aligned.log       <- log from SortMeRNA analysis
 ```
 
 ------------------------------------------------------------------------
@@ -347,9 +347,9 @@ Similar to the **SortMeRNA** step, we must first generate an index of the genome
 
 ``` bash
 ── results/4_aligned_sequences/
-    └── aligned_bam/sampleAligned.sortedByCoord.out.bam - Sorted BAM alignment fole
-    └── aligned_logs/sampleLog.final.out - Log of STAR alignment rate
-    └── aligned_logs/sampleLog.out - Log of steps take during STAR alignment
+    └── aligned_bam/sampleAligned.sortedByCoord.out.bam   <- Sorted BAM alignment fole
+    └── aligned_logs/sampleLog.final.out                  <- Log of STAR alignment rate
+    └── aligned_logs/sampleLog.out                        <- Log of steps take during STAR alignment
 ```
 
 ------------------------------------------------------------------------
@@ -395,8 +395,8 @@ Now that we have our .BAM alignment files, we can then proceed to try and summar
 
 ``` bash
 ── results/5_final_counts/
-    └── final_counts.txt - Final gene counts across all samples
-    └── final_counts.txt.summary - Summary of gene summarization 
+    └── final_counts.txt                <- Final gene counts across all samples
+    └── final_counts.txt.summary        <- Summary of gene summarization 
 ```
 
 ------------------------------------------------------------------------
@@ -428,8 +428,8 @@ During the qulaity filtering, rRNA removal, **STAR** alignment and gene summariz
 
 ``` bash
 ── results/6_multiQC/
-    └── multiqc_report.html - Beautiful figures representing the logs from each step
-    └── multiqc_data/ - Folder of data that multiqc found from various log files
+    └── multiqc_report.html     <- Beautiful figures representing the logs from each step
+    └── multiqc_data/           <-  Folder of data that multiqc found from various log files
 ```
 
 ------------------------------------------------------------------------
@@ -443,7 +443,7 @@ Once the workflow has completed, you can now use the gene count table as an inpu
 ``` r
 source("https://bioconductor.org/biocLite.R")
 biocLite("DESeq2") ; library(DESeq2)
-biocLite("ggplot2") ; library(DESeq2)
+biocLite("ggplot2") ; library(ggplot2)
 biocLite("clusterProfiler") ; library(clusterProfiler)
 biocLite("biomaRt") ; library(biomaRt)
 biocLite("ReactomePA") ; library(ReactomePA)
@@ -612,6 +612,13 @@ results$entrez <- mapIds(x = org.Mm.eg.db,
                          keytype = "SYMBOL",
                          multiVals = "first")
 
+# Add ENSEMBL
+results$ensembl <- mapIds(x = org.Mm.eg.db,
+                          keys = row.names(results),
+                          column = "ENSEMBL",
+                          keytype = "SYMBOL",
+                          multiVals = "first")
+
 # Subset for only significant genes (q < 0.05)
 results_sig <- subset(results, padj < 0.05)
 head(results_sig)
@@ -619,7 +626,7 @@ head(results_sig)
 
     ## log2 fold change (MAP): Group LoGlu vs HiGlu 
     ## Wald test p-value: Group LoGlu vs HiGlu 
-    ## DataFrame with 6 rows and 9 columns
+    ## DataFrame with 6 rows and 10 columns
     ##         baseMean log2FoldChange      lfcSE       stat       pvalue
     ##        <numeric>      <numeric>  <numeric>  <numeric>    <numeric>
     ## Xkr4    344.0867      0.6419222 0.16930869   3.791431 1.497817e-04
@@ -644,14 +651,14 @@ head(results_sig)
     ## St18                                               suppression of tumorigenicity 18
     ## Pcmtd1 protein-L-isoaspartate (D-aspartate) O-methyltransferase domain containing 1
     ## Sntg1                                                           syntrophin, gamma 1
-    ##             symbol      entrez
-    ##        <character> <character>
-    ## Xkr4          Xkr4      497097
-    ## Mrpl15      Mrpl15       27395
-    ## Tcea1        Tcea1       21399
-    ## St18          St18      240690
-    ## Pcmtd1      Pcmtd1      319263
-    ## Sntg1        Sntg1       71096
+    ##             symbol      entrez            ensembl
+    ##        <character> <character>        <character>
+    ## Xkr4          Xkr4      497097 ENSMUSG00000051951
+    ## Mrpl15      Mrpl15       27395 ENSMUSG00000033845
+    ## Tcea1        Tcea1       21399 ENSMUSG00000033813
+    ## St18          St18      240690 ENSMUSG00000033740
+    ## Pcmtd1      Pcmtd1      319263 ENSMUSG00000051285
+    ## Sntg1        Sntg1       71096 ENSMUSG00000025909
 
 ##### 8b. Write all the important results to .txt files
 
@@ -749,9 +756,9 @@ pheatmap(mat = mat,
 ``` r
 # Gather Log-fold change and FDR-corrected pvalues from DESeq2 results
 ## - Change pvalues to -log10 (1.3 = 0.05)
-data <- data.frame(pval = -log10(results$padj), 
-                   lfc = results$log2FoldChange, 
-                   row.names = row.names(results))
+data <- data.frame(gene = row.names(results),
+                   pval = -log10(results$padj), 
+                   lfc = results$log2FoldChange)
 
 # Remove any rows that have NA as an entry
 data <- na.omit(data)
@@ -759,18 +766,15 @@ data <- na.omit(data)
 # Color the points which are up or down
 ## If fold-change > 0 and pvalue > 1.3 (Increased significant)
 ## If fold-change < 0 and pvalue > 1.3 (Decreased significant)
-data <- mutate(data, color = ifelse(test = lfc > 0 & pval > 1.3, 
-                                    yes = "Increased", 
-                                    no = ifelse(test = lfc < 0 & pval > 1.3, 
-                                                yes = "Decreased", 
-                                                no = "nonsignificant")))
-
+data <- mutate(data, color = case_when(data$lfc > 0 & data$pval > 1.3 ~ "Increased",
+                                       data$lfc < 0 & data$pval > 1.3 ~ "Decreased",
+                                       data$pval < 1.3 ~ "nonsignificant"))
 # Make a basic ggplot2 object with x-y values
 vol <- ggplot(data, aes(x = lfc, y = pval, color = color))
 
 # Add ggplot2 layers
 vol +   
-  ggtitle(label = "Volcano Plot", subtitle = "Colored by fold-change directionality") +
+  ggtitle(label = "Volcano Plot", subtitle = "Colored by fold-change direction") +
   geom_point(size = 2.5, alpha = 0.8, na.rm = T) +
   scale_color_manual(name = "Directionality",
                      values = c(Increased = "#008B00", Decreased = "#CD4F39", nonsignificant = "darkgray")) +
