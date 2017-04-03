@@ -776,6 +776,7 @@ data <- na.omit(data)
 data <- mutate(data, color = case_when(data$lfc > 0 & data$pval > 1.3 ~ "Increased",
                                        data$lfc < 0 & data$pval > 1.3 ~ "Decreased",
                                        data$pval < 1.3 ~ "nonsignificant"))
+
 # Make a basic ggplot2 object with x-y values
 vol <- ggplot(data, aes(x = lfc, y = pval, color = color))
 
