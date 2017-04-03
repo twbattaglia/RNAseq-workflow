@@ -15,10 +15,17 @@ Miniconda is a comprehensive and easy to use package manager for Python (among o
 
 ``` bash
 # Download the Miniconda3 installer to your home directory (Only for macOS)
+<<<<<<< HEAD
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O ~/miniconda.sh
 
 # Download the Miniconda3 installer to your home directory (Only for LINUX or Cluster)
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+=======
+wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O ~/miniconda.sh
+
+# Download the Miniconda3 installer to your home directory (Only for LINUX or Cluster)
+wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O ~/miniconda.sh
+>>>>>>> origin/master
 
 # Run the miniconda installation
 bash miniconda.sh -b -f -p ~/miniconda
